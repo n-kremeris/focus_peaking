@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import numexpr as ne
 
 def main():
 
@@ -53,7 +52,7 @@ def main():
         mask_inv = cv2.bitwise_not(mask)
 
         #remove edges foreground from original image
-        bg = cv2.bitwise_or(src_raw, src_raw, mask=mask_inv)
+        bg = cv2.bitwise_or(src, src, mask=mask_inv)
 
         #combine foreground edges with background image
         result = cv2.bitwise_or(fg,bg)
