@@ -1,6 +1,9 @@
 import cv2
 import numpy as np
 
+# focus peaking configuration
+cfg_focuspeaking_enable = True
+
 # Grid configuration
 cfg_grid_enable = True; #enable drawing of grid
 cfg_grid_div = 3 # grid divisions
@@ -58,7 +61,32 @@ class Grid:
         return image
 
 
+#==== Focus peak detection ====#
+
+class FocusPeakDetector:
+    def __init__(self, th1, th2, blur_size, dilate_size, dilate_iter)
+
+def detect_focus_edges
+    #convert frame to grayscale
+    gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+ 
+    #equalize histogram
+    gray = cv2.equalizeHist(gray) 
+ 
+    #blur grayscale image
+    blur = cv2.GaussianBlur(gray,(3,3),0)
+    
+    #run edge detection
+    edges = cv2.Canny(gray,200,300)
+ 
+    #dilate detected edges to make them bigger
+    edges = cv2.dilate(edges,kernel,iterations = 1)
+
+    return edges;
+
+
 def main():
+
     #Use Video4linux backend 
     #(default is gstreamer which does not support fourcc settings)
     cap = cv2.VideoCapture(0, cv2.CAP_V4L)
@@ -87,22 +115,7 @@ def main():
         #read frame from device
         frame, src = cap.read()
         
-        #==== Focus peak detection ====#
-        #convert frame to grayscale
-        gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
-
-        #equalize histogram
-        gray = cv2.equalizeHist(gray) 
-
-        #blur grayscale image
-        blur = cv2.GaussianBlur(gray,(3,3),0)
-        
-        #run edge detection
-        edges = cv2.Canny(gray,200,300)
-
-        #dilate detected edges to make them bigger
-        edges = cv2.dilate(edges,kernel,iterations = 1)
-        
+                
         #==== Edge overlay on original image ====#
         #Create mask from detected edges
         ret, mask = cv2.threshold(edges, 10, 255, cv2.THRESH_BINARY)
@@ -141,8 +154,14 @@ def main():
 
         # Display result and wait for "q" to quit
         cv2.imshow("result", result)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        key = cv2.waitKey(1)
+
+        if key & 0xFF == ord('q'):
             break
+
+        if key & 0xff == ord('f'):
+            global cfg_focuspeaking_enable
+            cfg_focuspeaking_enable = not cfg_focuspeaking_enable
 
 
 if __name__ == "__main__":
