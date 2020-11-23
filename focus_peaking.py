@@ -1,22 +1,36 @@
 import cv2
 import numpy as np
 
+#TODO:
+cfg_overlay_rot = True; #enable drawing of the rule of thirds grid
+
+#resolution of video capture
+cfg_capture_width = 1600
+cfg_capture_height = 900
+
+#resolution of drawing
+cfg_draw_width = 1600
+cfg_draw_height = 900
+
 def main():
 
     #Use Video4linux backend 
     #(default is gstreamer which does not support fourcc settings)
-    cap = cv2.VideoCapture(2, cv2.CAP_V4L)
+    cap = cv2.VideoCapture(0, cv2.CAP_V4L)
     
     #set four character codec to MJPEG 
     #for cheap (~10gbp hdmi capture cards) default is YUYV at max. 5 FPS
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 
     #set device capture resolution
-    cap.set(3,1920)
-    cap.set(4,1080)
+    cap.set(3,cfg_capture_width)
+    cap.set(4,cfg_capture_height)
     
+
     #kernel for edge dilation (make thicker)
     kernel = np.ones((5,5),np.uint8)
+
+    target_dims = (cfg_draw_width, cfg_draw_height)
 
     while(True):   
         #read frame from device
@@ -30,10 +44,10 @@ def main():
         gray = cv2.equalizeHist(gray) 
 
         #blur grayscale image
-        blur = cv2.GaussianBlur(gray,(7,7),0)
+        blur = cv2.GaussianBlur(gray,(3,3),0)
         
         #run edge detection
-        edges = cv2.Canny(gray,50,250)
+        edges = cv2.Canny(gray,200,300)
 
         #dilate detected edges to make them bigger
         edges = cv2.dilate(edges,kernel,iterations = 1)
@@ -57,6 +71,7 @@ def main():
         #combine foreground edges with background image
         result = cv2.bitwise_or(fg,bg)
         
+        result = cv2.resize(result, target_dims)
         cv2.imshow("end", result)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
