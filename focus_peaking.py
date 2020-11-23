@@ -1,19 +1,64 @@
 import cv2
 import numpy as np
 
-#TODO:
-cfg_overlay_rot = True; #enable drawing of the rule of thirds grid
+# Grid configuration
+cfg_grid_enable = True; #enable drawing of grid
+cfg_grid_div = 3 # grid divisions
 
-#resolution of video capture
+# Resolution of video capture
 cfg_capture_width = 1600
 cfg_capture_height = 900
 
-#resolution of drawing
+# Resolution of drawing
 cfg_draw_width = 1600
 cfg_draw_height = 900
 
-def main():
+# Misc config
+cfg_mirror = True # Mirror the image
+cfg_fullscreen_enable = True # Fullscreen display of result
 
+
+class Grid:
+    lines = [] 
+    x_div = 0
+    y_div = 0
+    
+    # Precalculate required lines in advance, requires target dimensions
+    def __init__(self, target_dims, divisor):
+        self.target_dims = target_dims
+        self.divisor = divisor
+
+        # x and y division length is width and heigth divided by the grid divisor
+        # truncate to integer value
+        self.x_div = int(target_dims[0] / divisor)
+        self.y_div = int(target_dims[1] / divisor)
+
+        #add vertical lines
+        for i in range(1, divisor):
+            x = self.x_div * i;
+            y0 = 0;
+            y1 = target_dims[1]
+            p1 = (x, y0)
+            p2 = (x, y1)
+            self.lines.append( (p1, p2))
+
+        #add horizontal lines
+        for i in range(1, divisor):
+            y = self.y_div * i;
+            x0 = 0;
+            x1 = target_dims[0]
+            p1 = (x0, y)
+            p2 = (x1, y)
+            self.lines.append( (p1, p2))
+
+    def Draw(self, image):
+        for line in self.lines:
+            image = cv2.line(image, line[0], line[1], (0, 0, 255), 1, 1)
+
+        return image
+
+
+def main():
     #Use Video4linux backend 
     #(default is gstreamer which does not support fourcc settings)
     cap = cv2.VideoCapture(0, cv2.CAP_V4L)
@@ -23,14 +68,20 @@ def main():
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 
     #set device capture resolution
+
     cap.set(3,cfg_capture_width)
     cap.set(4,cfg_capture_height)
     
 
     #kernel for edge dilation (make thicker)
     kernel = np.ones((5,5),np.uint8)
-
+    
+    # resizing detection
+    capture_dims = (cfg_capture_width, cfg_capture_height)
     target_dims = (cfg_draw_width, cfg_draw_height)
+    resize_f = True
+
+    current_grid = Grid(target_dims, cfg_grid_div)
 
     while(True):   
         #read frame from device
@@ -71,8 +122,25 @@ def main():
         #combine foreground edges with background image
         result = cv2.bitwise_or(fg,bg)
         
-        result = cv2.resize(result, target_dims)
-        cv2.imshow("end", result)
+        #resize if target dimensions dont match capture dimensions
+        if (resize_f):
+            result = cv2.resize(result, target_dims)
+
+        #flip image horisontaly if mirroring enabled
+        if (cfg_mirror):
+            result = cv2.flip(result, 1)
+            
+        # draw grid
+        if (cfg_grid_enable):
+            result = current_grid.Draw(result)
+
+        #set result window properties to fullscreen if enabled
+        if (cfg_fullscreen_enable):
+            cv2.namedWindow("result", cv2.WND_PROP_FULLSCREEN)
+            cv2.setWindowProperty("result",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+
+        # Display result and wait for "q" to quit
+        cv2.imshow("result", result)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
